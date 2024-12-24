@@ -1,0 +1,108 @@
+class Account:
+    def __init__(self, account_id, account_type, initial_balance=0):
+        self.account_id = account_id
+        self.account_type = account_type
+        self.balance = initial_balance
+        self.transactions = []
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive.")
+        self.balance += amount
+        self.log_transaction("deposit", amount)
+        return {"status": "success", "new_balance": self.balance}
+
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive.")
+        if self.balance < amount:
+            raise ValueError("Insufficient funds.")
+        self.balance -= amount
+        self.log_transaction("withdraw", amount)
+        return {"status": "success", "new_balance": self.balance}
+
+    def log_transaction(self, transaction_type, amount, to_account=None):
+        transaction = {
+            "type": transaction_type,
+            "amount": amount,
+            "to_account": to_account,
+            "balance_after": self.balance,
+        }
+        self.transactions.append(transaction)
+
+    def get_transaction_history(self):
+        return self.transactions
+
+
+class BankingSystem:
+    def __init__(self):
+        self.accounts = {}
+
+    def create_account(self, account_id, account_type, initial_balance=0):
+        if account_id in self.accounts:
+            raise ValueError(f"Account with ID {account_id} already exists.")
+        new_account = Account(account_id, account_type, initial_balance)
+        self.accounts[account_id] = new_account
+        return {"status": "success", "account_id": account_id}
+
+    def deposit(self, account_id, amount):
+        account = self._get_account(account_id)
+        return account.deposit(amount)
+
+    def withdraw(self, account_id, amount):
+        account = self._get_account(account_id)
+        return account.withdraw(amount)
+
+    def transfer(self, from_account_id, to_account_id, amount):
+        from_account = self._get_account(from_account_id)
+        to_account = self._get_account(to_account_id)
+        
+        if from_account_id == to_account_id:
+            raise ValueError("Cannot transfer to the same account.")
+        
+        from_account.withdraw(amount)
+        to_account.deposit(amount)
+        
+        from_account.log_transaction("transfer_out", amount, to_account_id)
+        to_account.log_transaction("transfer_in", amount, from_account_id)
+
+        return {"status": "success", "amount_transferred": amount}
+
+    def get_account_balance(self, account_id):
+        account = self._get_account(account_id)
+        return {"account_id": account_id, "balance": account.balance}
+
+    def get_transaction_history(self, account_id):
+        account = self._get_account(account_id)
+        return account.get_transaction_history()
+
+    def _get_account(self, account_id):
+        if account_id not in self.accounts:
+            raise ValueError(f"Account with ID {account_id} does not exist.")
+        return self.accounts[account_id]
+
+
+# Example Usage
+if __name__ == "__main__":
+    bank = BankingSystem()
+
+    # Create accounts
+    bank.create_account("1001", "savings", 500)
+    bank.create_account("1002", "checking", 1000)
+
+    # Deposit funds
+    print(bank.deposit("1001", 200))  # Deposit $200 to account 1001
+
+    # Withdraw funds
+    print(bank.withdraw("1002", 300))  # Withdraw $300 from account 1002
+
+    # Transfer funds
+    print(bank.transfer("1001", "1002", 150))  # Transfer $150 from account 1001 to 1002
+
+    # Get balances
+    print(bank.get_account_balance("1001"))  # Balance of account 1001
+    print(bank.get_account_balance("1002"))  # Balance of account 1002
+
+    # Get transaction history
+    print(bank.get_transaction_history("1001"))  # Transaction history for account 1001
+
